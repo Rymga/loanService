@@ -5,6 +5,8 @@ import com.libreriaSanSebastian.loanService.repository.PrestamoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 //
@@ -49,5 +51,19 @@ public class PrestamoService {
         }
 
         return prestamoRepository.save(prestamo);
+    }
+    public Prestamo devolverLibro(Long id) {
+        Optional<Prestamo> prestamoOpt = prestamoRepository.findById(id);
+        if (prestamoOpt.isPresent()) {
+            Prestamo prestamo = prestamoOpt.get();
+            prestamo.setEstado("DEVUELTO");
+            prestamo.setFechaDevolucion(new Date());
+            return prestamoRepository.save(prestamo);
+        }
+        throw new RuntimeException("Préstamo no encontrado");
+    }
+
+    public void eliminar(Long id) {
+        prestamoRepository.deleteById(id);
     }
 }
