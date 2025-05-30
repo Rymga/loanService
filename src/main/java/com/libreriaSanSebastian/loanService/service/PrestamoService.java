@@ -29,7 +29,7 @@ public class PrestamoService {
     }
 
     public Prestamo crearPrestamo(Prestamo prestamo) {
-        // Verificar que el usuario existe
+        // Verificar que el usuario existe.
         try {
             String userUrl = "http://localhost:8082/api/v1/usuarios/" + prestamo.getUsuarioId();
             restTemplate.getForObject(userUrl, Object.class);
