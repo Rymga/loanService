@@ -27,4 +27,27 @@ public class PrestamoService {
     public List<Prestamo> buscarPorUsuario(Long usuarioId) {
         return prestamoRepository.findByUsuarioId(usuarioId);
     }
+
+    public Prestamo crearPrestamo(Prestamo prestamo) {
+        // Verificar que el usuario existe
+        try {
+            String userUrl = "http://localhost:8082/api/v1/usuarios/" + prestamo.getUsuarioId();
+            restTemplate.getForObject(userUrl, Object.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Usuario no encontrado");
+        }
+
+        // Verificar que el libro existe y decrementar stock
+        try {
+            String bookUrl = "http://localhost:8081/api/v1/libros/" + prestamo.getLibroId();
+            restTemplate.getForObject(bookUrl, Object.class);
+
+            String decrementUrl = "http://localhost:8081/api/v1/libros/decrementar-stock/" + prestamo.getLibroId();
+            restTemplate.patchForObject(decrementUrl, null, Void.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Libro no disponible o no encontrado");
+        }
+
+        return prestamoRepository.save(prestamo);
+    }
 }
