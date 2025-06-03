@@ -3,9 +3,12 @@ package com.libreriaSanSebastian.loanService.controller;
 import com.libreriaSanSebastian.loanService.modelo.Prestamo;
 import com.libreriaSanSebastian.loanService.service.PrestamoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/prestamos")
@@ -33,22 +36,34 @@ public class PrestamoController {
     }
 
     @PostMapping
-    public ResponseEntity<Prestamo> crearPrestamo(@RequestBody Prestamo prestamo) {
+    public ResponseEntity<?> crearPrestamo(@RequestBody Prestamo prestamo) {
         try {
+            // Validación básica
+            if (prestamo.getUsuarioId() == null || prestamo.getLibroId() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Usuario ID y Libro ID son requeridos"));
+            }
+
             Prestamo nuevoPrestamo = prestamoService.crearPrestamo(prestamo);
-            return ResponseEntity.ok(nuevoPrestamo);
+            return ResponseEntity.status(HttpStatus.CREATED).body(nuevoPrestamo);
+
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error interno del servidor: " + e.getMessage()));
         }
     }
 
     @PatchMapping("/devolver/{id}")
-    public ResponseEntity<Prestamo> devolverLibro(@PathVariable Long id) {
+    public ResponseEntity<?> devolverLibro(@PathVariable Long id) {
         try {
             Prestamo prestamo = prestamoService.devolverLibro(id);
             return ResponseEntity.ok(prestamo);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

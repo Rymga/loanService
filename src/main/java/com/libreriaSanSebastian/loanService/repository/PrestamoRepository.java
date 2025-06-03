@@ -10,6 +10,5 @@ import java.util.List;
 @Repository
 public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
     List<Prestamo> findByUsuarioId(Long usuarioId);
-    List<Prestamo> findByLibroId(Long libroId);
-    List<Prestamo> findByEstado(String estado);
+
 }
