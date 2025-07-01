@@ -1,5 +1,6 @@
 package com.libreriaSanSebastian.loanService.controller;
 
+import com.libreriaSanSebastian.loanService.assemblers.PrestamoModelAssembler;
 import com.libreriaSanSebastian.loanService.modelo.Prestamo;
 import com.libreriaSanSebastian.loanService.service.PrestamoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,12 +11,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
 @RequestMapping("/api/v1/prestamos")
@@ -24,6 +30,9 @@ public class PrestamoController {
 
     @Autowired
     private PrestamoService prestamoService;
+
+    @Autowired
+    private PrestamoModelAssembler prestamoModelAssembler;
 
     @Operation(
         summary = "Listar todos los préstamos",
@@ -35,8 +44,13 @@ public class PrestamoController {
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = Prestamo.class))
     )
     @GetMapping
-    public List<Prestamo> listarTodos() {
-        return prestamoService.listarTodos();
+    public CollectionModel<EntityModel<Prestamo>> listarTodos() {
+        List<EntityModel<Prestamo>> prestamos = prestamoService.listarTodos().stream()
+                .map(prestamoModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(prestamos,
+                linkTo(methodOn(PrestamoController.class).listarTodos()).withSelfRel());
     }
 
     @Operation(
@@ -56,10 +70,11 @@ public class PrestamoController {
         )
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Prestamo> obtenerPorId(
+    public ResponseEntity<EntityModel<Prestamo>> obtenerPorId(
             @Parameter(description = "ID único del préstamo", required = true, example = "1")
             @PathVariable Long id) {
         return prestamoService.buscarPorId(id)
+                .map(prestamoModelAssembler::toModel)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -81,11 +96,16 @@ public class PrestamoController {
         )
     })
     @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<List<Prestamo>> obtenerPorUsuario(
+    public CollectionModel<EntityModel<Prestamo>> obtenerPorUsuario(
             @Parameter(description = "ID único del usuario", required = true, example = "1")
             @PathVariable Long usuarioId) {
-        List<Prestamo> prestamos = prestamoService.buscarPorUsuario(usuarioId);
-        return ResponseEntity.ok(prestamos);
+        List<EntityModel<Prestamo>> prestamos = prestamoService.buscarPorUsuario(usuarioId).stream()
+                .map(prestamoModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(prestamos,
+                linkTo(methodOn(PrestamoController.class).obtenerPorUsuario(usuarioId)).withSelfRel(),
+                linkTo(methodOn(PrestamoController.class).listarTodos()).withRel("all-prestamos"));
     }
 
     @Operation(
@@ -120,7 +140,8 @@ public class PrestamoController {
             }
 
             Prestamo nuevoPrestamo = prestamoService.crearPrestamo(prestamo);
-            return ResponseEntity.status(HttpStatus.CREATED).body(nuevoPrestamo);
+            EntityModel<Prestamo> prestamoModel = prestamoModelAssembler.toModel(nuevoPrestamo);
+            return ResponseEntity.status(HttpStatus.CREATED).body(prestamoModel);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
@@ -157,7 +178,8 @@ public class PrestamoController {
             @PathVariable Long id) {
         try {
             Prestamo prestamo = prestamoService.devolverLibro(id);
-            return ResponseEntity.ok(prestamo);
+            EntityModel<Prestamo> prestamoModel = prestamoModelAssembler.toModel(prestamo);
+            return ResponseEntity.ok(prestamoModel);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
